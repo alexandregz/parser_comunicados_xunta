@@ -16,6 +16,9 @@ use Time::Piece;
 use lib 'lib';
 use parseador;
 
+# separador entre campos (Flourish emprega "," no csv, Excel ";")
+my $SEPARADOR = ',';
+
 
 die "Uso: perl $0 FICHEIRO [conservar_lumes=1]\n" unless($ARGV[0]);
 my $ficheiro = $ARGV[0];
@@ -83,7 +86,7 @@ my @sorted_keys_asc = sort {
 my %ultimoResultadoHectareas;
 
 # cabeceira
-print "lume,concello,estado,".join(",", @sorted_keys_asc)."\n";     # para Flourish emprego ","
+print "lume $SEPARADOR concello $SEPARADOR estado $SEPARADOR".join($SEPARADOR, @sorted_keys_asc)."\n";
 
 #loop hash con datos, ordeado por key (que é o lume)
 foreach my $lume (sort {lc $a cmp lc $b} keys %dataLumes) {
@@ -91,7 +94,7 @@ foreach my $lume (sort {lc $a cmp lc $b} keys %dataLumes) {
     $ultimoResultadoHectareas{$lume} = '';
 
     # keys invariables
-    print sprintf("%s,%s,%s", $lume, $dataLumes{$lume}{concello}, $dataLumes{$lume}{estado});
+    print sprintf("%s $SEPARADOR %s $SEPARADOR %s", $lume, $dataLumes{$lume}{concello}, $dataLumes{$lume}{estado});
 
     # keys que hai que sacar ordeadas, as fechas
     foreach my $dia (@sorted_keys_asc) {
@@ -102,7 +105,7 @@ foreach my $lume (sort {lc $a cmp lc $b} keys %dataLumes) {
             $ultimoResultadoHectareas{$lume} = $dataLumes{$lume}{$dia} if($dataLumes{$lume}{$dia});
         }
 
-        print sprintf(",%s", $dataLumes{$lume}{$dia} || $ultimoResultadoHectareas{$lume});
+        print sprintf("$SEPARADOR %s", $dataLumes{$lume}{$dia} || $ultimoResultadoHectareas{$lume});
     }
     print "\n";     #salto de linha final
 }
