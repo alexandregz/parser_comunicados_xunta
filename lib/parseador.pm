@@ -8,6 +8,7 @@ our @EXPORT_OK = qw(
     parsearConcelloMaisParroquia
     parseaFecha
     parseaHectareas
+    trim
 );
 
 
@@ -34,7 +35,6 @@ sub parsearConcelloMaisParroquia{
 }
 
 
-# ToDo
 # recolhemos data, a que sempre está
 #   Data de actualización: <span class="texto-bold">19/08/2025</span>
 # outras:
@@ -56,7 +56,7 @@ sub parseaHectareas{
 
     # ás veces hai comas
     if($line =~ /([\d\.\,]+) hectáreas?/gm) {
-        print "Hectareas: [$1]\n";
+        # print "Hectareas: [$1]\n";
         return $1;
     }
 }
@@ -70,6 +70,9 @@ sub parseaConcelloParroquia{
 
     # Monfero-Queixeiro. Afecta o Parque das Fragas do Eume
     $concelloParroquia =~ s/(.*)\. .*/$1/;
+
+    # trimeamos (caso "Vilardevós-Moialde" e "Vilardevós-Moialde " detectado en parsear_lumes_comunicados_dia.pl)
+    $concelloParroquia = trim($concelloParroquia);
 
     return $concelloParroquia;
 }
@@ -102,11 +105,11 @@ sub parseadorXeral{
 
             my $tipo = $matches[0];
             my $concelloParroquia = parseaConcelloParroquia($matches[1]);
-            print "concelloParroquia: [$concelloParroquia]\n";
+            # print "concelloParroquia: [$concelloParroquia]\n";
 
-            print "tipo: [$tipo]  -- ";
+            # print "tipo: [$tipo]  -- ";
             my $lume = parsearConcelloMaisParroquia($concelloParroquia);
-            print "lume: [$lume]\n";
+            # print "lume: [$lume]\n";
 
             $data{$concelloParroquia} = {'concello' => $lume, 'estado' => $tipo};  # concello vai ser o output (podería haber 2 no mesmo...)
             $dataTmp[0] = $concelloParroquia;
@@ -116,6 +119,7 @@ sub parseadorXeral{
     return \%data;
 }
 
-
+# ripped from https://perlmaven.com/trim
+sub  trim { my $s = shift; $s =~ s/^\s+|\s+$//g; return $s };
 
 1; 

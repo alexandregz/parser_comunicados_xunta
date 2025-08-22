@@ -11,15 +11,21 @@ use warnings;
 use HTTP::Tiny;
 use HTML::TreeBuilder;
 use Data::Dumper;
+use Time::Piece;
 
 use lib 'lib';
 use parseador;
 
-die "Uso: perl $0 FICHEIRO \n" unless($ARGV[0]);
-my $ficheiro = $ARGV[0];
 
-# hash final cos datos
+die "Uso: perl $0 FICHEIRO [conservar_lumes=1]\n" unless($ARGV[0]);
+my $ficheiro = $ARGV[0];
+my $conservar_lumes = $ARGV[1] || undef;        # dá unha vision global de como foi todo o verán
+
+#hash de datos en bruto e que se empregará tamén ao final con fechas
 my %data;
+# hash final de dato de lumes
+my %dataLumes;
+
 
 # abrimos ficheiro con urls
 my $urls = do {
@@ -34,9 +40,11 @@ my $http = HTTP::Tiny->new();
 
 # recorremos as urls do ficheiros
 foreach my $url ( split(/\n/, $urls) ) {
-    next if($url =~ /;/);   # permitimos comentarios estilo .ini, comezando por ;
+    $url = parseador::trim($url);
 
-    print "url: $url\n";
+    next if($url =~ /;/);   # permitimos comentarios estilo .ini, comezando por ;
+    next if($url eq '');   # permitimos linhas baleiras por claridade
+    # print "url: $url\n";
 
     # url
     my $response = $http->get($url);
@@ -45,49 +53,59 @@ foreach my $url ( split(/\n/, $urls) ) {
     my $fecha = parseador::parseaFecha($html_content);
     # parsea os datos engadindo a infor nun hash "FECHA1=>datos_lumes1,FECHA2=>datos_lumes1"
     $data{$fecha} = parseador::parseadorXeral($html_content);
-
-    print "----------\n";
+    # print "----------\n";
 }
+# print Dumper \%data;
 
 
-print Dumper \%data;
+# loop de hash para cargar os datos por lumes en %dataLumes
+# Aqui cómpre revisar os lumes, algúns cambiaron de nome (p.e. "Carballeda de Valdeorras-Casaio (anteriormente A Veiga-A Ponte)" !!) 
+foreach my $dia (keys(%data)) {
 
-die;
+    foreach my $lume (keys(%{$data{$dia}})) {
+        $dataLumes{$lume} = $data{$dia}{$lume} unless($dataLumes{$lume});   # meto os datos "velhos"
+        $dataLumes{$lume}{$dia} = $data{$dia}{$lume}{'hectareas'};          # meto as hectareas de cada dia, empregando dia de key
+        delete($dataLumes{$lume}{hectareas});                               # e elimino a key hectareas, que non se usa
+    }
+}
+# print Dumper \%dataLumes;
+
+
+# cos dous hashes xa somos quen de facer output
+
+# creamos un array coas keys ordeadas de data mais antiga a mais nova
+my @sorted_keys_asc = sort {
+    Time::Piece->strptime($a, '%d/%m/%Y') <=> Time::Piece->strptime($b, '%d/%m/%Y')
+} keys %data;
+
+
+# hash temporal para ultimo resultado, para conservalo no caso de que queiramos que se vexan todos os lumes, extinguidos, controlados, etc.
+my %ultimoResultadoHectareas;
 
 # cabeceira
-print "lume;concello;estado;hectareas\n";
+print "lume,concello,estado,".join(",", @sorted_keys_asc)."\n";     # para Flourish emprego ","
 
 #loop hash con datos, ordeado por key (que é o lume)
-foreach my $lume (sort {lc $a cmp lc $b} keys %data) {
-    # NOTA: ás veces pode dar un warning tal que "Use of uninitialized value in sprintf at parsear_lumes_comunicados.pl line 125.",
-    #  porque nos extinguidos non saen hectareas queimadas porque ás veces empreganse comas
-    #  (p.e. As Neves-San pedro de batallans: 89,88 8 de agosto)
-    print sprintf("%s;%s;%s;%s\n", $lume, $data{$lume}{concello}, $data{$lume}{estado}, $data{$lume}{hectareas});
+foreach my $lume (sort {lc $a cmp lc $b} keys %dataLumes) {
+    # ultimo resultado
+    $ultimoResultadoHectareas{$lume} = '';
+
+    # keys invariables
+    print sprintf("%s,%s,%s", $lume, $dataLumes{$lume}{concello}, $dataLumes{$lume}{estado});
+
+    # keys que hai que sacar ordeadas, as fechas
+    foreach my $dia (@sorted_keys_asc) {
+        # para Flourish quitamos puntos de milleiros
+        $dataLumes{$lume}{$dia} =~ s/\.//g if($dataLumes{$lume}{$dia});
+        
+        if($conservar_lumes) {
+            $ultimoResultadoHectareas{$lume} = $dataLumes{$lume}{$dia} if($dataLumes{$lume}{$dia});
+        }
+
+        print sprintf(",%s", $dataLumes{$lume}{$dia} || $ultimoResultadoHectareas{$lume});
+    }
+    print "\n";     #salto de linha final
 }
 
-
-
-
-# formatos: concello-parroquia; concello1-parroquia1 e concello2-parroquia2; concello1 (parroquia1 e parroquia2) e concello2-parroquia3; e algún máis
-#   por comodidade so vou devolver o primeiro concelho!
-sub _parsearConcelloMaisParroquia{
-    my $lume = $_[0];
-    
-    # engadido: non fago return por casos como "Carballeda de Valdeorras-Casaio (anteriormente A Veiga-A Ponte)" e cambio o elsif por un if
-    
-    # Chandrexa de Queixa (Requeixo e Parafita) e Vilariño de Conso-Mormentelos, p.e.
-    if($lume =~ /(.*?) \(/) {
-        # return $1;
-        $lume = $1;
-    }
-    # concello1-parroquia1
-    # elsif($lume =~ /(.*?)\-(.*)?/) {
-    if($lume =~ /(.*?)\-(.*)?/) {
-        # return $1;  # concello1 directamente
-        $lume = $1;
-    }
-
-    return $lume;
-}
 
 1;

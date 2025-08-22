@@ -24,13 +24,20 @@ lume_n,concello,estado_lume_n,hectareas_lume_n
 ### Uso multiple
 
 ```bash
-$ Uso: perl parsear_lumes_comunicados_dias.pl ficheiro_urls
+$ Uso: perl parsear_lumes_comunicados_dias.pl ficheiro_urls [conservar_lumes=1]
 ```
 
 Crea ficheiro .csv:
 ```
-lume;concello;yyyy-mm-dd1;yyyy-mm-dd2;yyyy-mm-dd_n
-lume1,concello,hectareas_dia1,hectareas_dia2,hectareas_dia_n
-lume2,concello,hectareas_dia1,hectareas_dia2,hectareas_dia_n
-lume_n,concello,hectareas_dia1,hectareas_dia2,hectareas_dia_n
+lume,concello,estado,dd1/mm/yyyy,dd2/mm/yyyy,dd_n/mm/yyyy
+lume1,concello,estado,hectareas_dia1,hectareas_dia2,hectareas_dia_n
+lume2,concello,estado,hectareas_dia1,hectareas_dia2,hectareas_dia_n
+lume_n,concello,estado,hectareas_dia1,hectareas_dia2,hectareas_dia_n
 ```
+
+Con `conservar_lumes=1` mantén o último resultado aínda que o lume sexa declarado como `Estabilizado, Extinguido ou Controlado`. Dá unha idea xeral do global do verán.
+
+
+### ToDo
+
+Parsear directamente as novas en lugar de ter que revisalas e anotalas en ficheiro para `parsear_lumes_comunicados_dias.pl`
