@@ -1,4 +1,10 @@
-# Igual que parsear_lumes_comunicados.pl pero vai engadindo resultados por días, creando un hash de todos os lumes como base
+# abre un ficheiro coas urls a parsear de comunicados de lumes de 2025 da Xunta, unha por linha
+# crea un .csv co seguinte formato:
+#   lume1,concello,hectareas_dia1,hectareas_dia2,hectareas_dia_n
+#   lume2,concello,hectareas_dia1,hectareas_dia2,hectareas_dia_n
+#   ...
+#   lumen,concello,hectareas_dia1,hectareas_dia2,hectareas_dia_n
+#
 
 use strict;
 use warnings;
@@ -6,93 +12,47 @@ use HTTP::Tiny;
 use HTML::TreeBuilder;
 use Data::Dumper;
 
+use lib 'lib';
+use parseador;
 
-die "Uso: perl $0 URL \n" unless($ARGV[0]);
-my $url = $ARGV[0];
+die "Uso: perl $0 FICHEIRO \n" unless($ARGV[0]);
+my $ficheiro = $ARGV[0];
 
-# initialize the HTTP client
-my $http = HTTP::Tiny->new();
-# Retrieve the HTML code of the page to scrape
-my $response = $http->get($url);
-my $html_content = $response->{content};
-
-# print $html_content;
-# die;
-
-    
 # hash final cos datos
 my %data;
 
+# abrimos ficheiro con urls
+my $urls = do {
+    local $/ = undef;
+    open my $fh, "<", $ficheiro
+        or die "non puiden abrir $ficheiro: $!";
+    <$fh>;
+};
 
-# # DEBUG
-# # my $file = "3agosto2025.txt";
-# # my $file = "19agosto2025.txt";
-# # my $file = "08agosto2025.txt";
-# my $file = "06agosto2025.txt";
-# my $html_content = do {
-#     local $/ = undef;
-#     open my $fh, "<", $file
-#         or die "could not open $file: $!";
-#     <$fh>;
-# };
+# initialize the HTTP client
+my $http = HTTP::Tiny->new();
 
+# recorremos as urls do ficheiros
+foreach my $url ( split(/\n/, $urls) ) {
+    next if($url =~ /;/);   # permitimos comentarios estilo .ini, comezando por ;
 
-# # ToDo
-# # recolhemos data, a que sempre está
-# #   Data de actualización: <span class="texto-bold">19/08/2025</span>
-# # outras:
-# #    "datePublished": "2025-08-19T21:09:56+02:00"
-# #   <meta name="content_date" content='03/08/2025' xml:lang="gl" lang="gl">
-# if($html_content =~ /Data de actualización: <span class="texto-bold">(.*)<\/span>/) {
-#     die "data: $1";
-# }
+    print "url: $url\n";
 
+    # url
+    my $response = $http->get($url);
+    my $html_content = $response->{content};
 
+    my $fecha = parseador::parseaFecha($html_content);
+    # parsea os datos engadindo a infor nun hash "FECHA1=>datos_lumes1,FECHA2=>datos_lumes1"
+    $data{$fecha} = parseador::parseadorXeral($html_content);
 
-# recorremos linha a linha e cando cheguemos a activos/controlados/etc, colhemos concelho e despois as hectareas na seguinte linha
-my @lines = split /\n/, $html_content;
-
-
-my @dataTmp;    # para conservar $lume na seguinte linha
-
-my $activo = undef;
-foreach my $line (@lines) {
-    # hectareas, seguinte linha
-    if($activo) {
-        # ás veces hai comas
-        if(my @matches = $line =~ /([\d\.\,]+) hectáreas?/gm) {
-            # print "Hectareas: [$1]\n";
-            $data{$dataTmp[0]}{hectareas} = $1;
-        }
-        $activo = undef;         # "reseteamos"
-    }
-
-
-    # ACTIVOS
-    if(my @matches = $line =~ /(Activo|Controlado|Estabilizado|Extinguido) (.*?)<\/(strong|h2)/gm) {
-        $activo = 1;
-
-        my $tipo = $matches[0];
-        my $concelloParroquia = $matches[1];
-        print "concelloParroquia: [$concelloParroquia]\n";
-
-        # Vilardevós-Terroso, Activada Situación 2
-        $concelloParroquia =~ s/(.*), .*/$1/;
-
-        # Monfero-Queixeiro. Afecta o Parque das Fragas do Eume
-        $concelloParroquia =~ s/(.*)\. .*/$1/;
-
-
-        # print "tipo: [$tipo]  -- ";
-        my $lume = _parsearConcelloMaisParroquia($concelloParroquia);
-        # print "lume: [$lume]\n";
-
-        $data{$concelloParroquia} = {'concello' => $lume, 'estado' => $tipo};  # concello vai ser o output (podería haber 2 no mesmo...)
-        $dataTmp[0] = $concelloParroquia;
-    }
+    print "----------\n";
 }
 
-# print Dumper \%data;
+
+print Dumper \%data;
+
+die;
 
 # cabeceira
 print "lume;concello;estado;hectareas\n";
@@ -104,8 +64,6 @@ foreach my $lume (sort {lc $a cmp lc $b} keys %data) {
     #  (p.e. As Neves-San pedro de batallans: 89,88 8 de agosto)
     print sprintf("%s;%s;%s;%s\n", $lume, $data{$lume}{concello}, $data{$lume}{estado}, $data{$lume}{hectareas});
 }
-
-
 
 
 
