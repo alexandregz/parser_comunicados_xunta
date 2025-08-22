@@ -10,7 +10,7 @@ Dous métodos de uso
 ### Uso individual
 
 ```bash
-$  Uso: perl $0 URL
+$  Uso: perl parsear_lumes_comunicados.pl URL
 ```
 
 Crea ficheiro .csv:
@@ -21,25 +21,16 @@ lume_n,concello,estado_lume_n,hectareas_lume_n
 ```
 
 
-###### ToDo
-
-Crea ficheiro .csv:
-```
-lume1,concello,hectareas_dia1,hectareas_dia2,hectareas_dia_n
-lume2,concello,hectareas_dia1,hectareas_dia2,hectareas_dia_n
-lumen,concello,hectareas_dia1,hectareas_dia2,hectareas_dia_n
-```
-
-
 ### Uso multiple
 
 ```bash
-$ Uso: perl $0 ficheiro_urls desglose=true
+$ Uso: perl parsear_lumes_comunicados_dias.pl ficheiro_urls
 ```
 
-Crea múltiples ficheiros .csv, un por lume
+Crea ficheiro .csv:
 ```
-lume,concello,dia1,hectareas_dia1,estado_dia1
-lume,concello,dia1,hectareas_dia2,estado_dia2
-lume,concello,dia1,hectareas_dia_n,estado_dia_n
+lume;concello;yyyy-mm-dd1;yyyy-mm-dd2;yyyy-mm-dd_n
+lume1,concello,hectareas_dia1,hectareas_dia2,hectareas_dia_n
+lume2,concello,hectareas_dia1,hectareas_dia2,hectareas_dia_n
+lume_n,concello,hectareas_dia1,hectareas_dia2,hectareas_dia_n
 ```
